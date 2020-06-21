@@ -37,22 +37,18 @@ describe('DI:', function () {
                 ], UtilityService);
                 return UtilityService;
             }());
-            expect(UtilityService['diServiceName']).toEqual('UtilityService');
+            expect(UtilityService['diContainerName']).toEqual('UtilityService');
         });
-        it('should throw error if no service name is supplied', function () {
-            try {
-                var UtilityService = (function () {
-                    function UtilityService() {
-                    }
-                    UtilityService = __decorate([
-                        src_1.DI.Singleton(undefined)
-                    ], UtilityService);
-                    return UtilityService;
-                }());
-            }
-            catch (e) {
-                expect(e.message).toContain('Please enter a service name');
-            }
+        it('should generate random name', function () {
+            var UtilityService = (function () {
+                function UtilityService() {
+                }
+                UtilityService = __decorate([
+                    src_1.DI.Singleton()
+                ], UtilityService);
+                return UtilityService;
+            }());
+            expect(UtilityService['diContainerName']).toBeDefined();
         });
     });
     describe('Inject()', function () {
@@ -70,7 +66,7 @@ describe('DI:', function () {
                     return this.utilitySrv.add(num1, num2);
                 };
                 __decorate([
-                    src_1.DI.Inject(UtilityService, 'UtilityService'),
+                    src_1.DI.Inject(UtilityService),
                     __metadata("design:type", UtilityService)
                 ], MyTest.prototype, "utilitySrv", void 0);
                 return MyTest;
@@ -87,7 +83,7 @@ describe('DI:', function () {
                 }
                 UtilityService.prototype.getName = function () { return this.name; };
                 UtilityService = __decorate([
-                    src_1.DI.Singleton('UtilityService'),
+                    src_1.DI.Singleton(),
                     __metadata("design:paramtypes", [])
                 ], UtilityService);
                 return UtilityService;
@@ -121,7 +117,7 @@ describe('DI:', function () {
         });
     });
     describe('InjectViaFactory()', function () {
-        it('should inject using factory class', function () {
+        it('should inject using factory', function () {
             var env = 'dev';
             var BaseStorageService = (function () {
                 function BaseStorageService() {
@@ -146,25 +142,19 @@ describe('DI:', function () {
                 }
                 return MemoryStorageService;
             }(BaseStorageService));
-            var StorageFactory = (function (_super) {
-                __extends(StorageFactory, _super);
-                function StorageFactory() {
-                    var _this = _super !== null && _super.apply(this, arguments) || this;
-                    _this.serviceName = 'StorageService';
-                    return _this;
-                }
-                StorageFactory.prototype.create = function () {
+            var storageFactory = {
+                provide: BaseStorageService,
+                create: function () {
                     if (env === 'dev')
                         return new MemoryStorageService();
                     return new FileStorageService();
-                };
-                return StorageFactory;
-            }(src_1.DIBaseFactory));
+                }
+            };
             var MyTest = (function () {
                 function MyTest() {
                 }
                 __decorate([
-                    src_1.DI.InjectViaFactory(new StorageFactory()),
+                    src_1.DI.InjectViaFactory(storageFactory),
                     __metadata("design:type", BaseStorageService)
                 ], MyTest.prototype, "storageSrv", void 0);
                 return MyTest;
@@ -176,53 +166,86 @@ describe('DI:', function () {
             var myTest2 = new MyTest();
             expect(myTest2.storageSrv.name).toEqual('file-storage');
         });
-        it('should inject using factory object', function () {
-            var env = 'dev';
-            var BaseStorageService = (function () {
-                function BaseStorageService() {
+        it('should inject using factory as mock', function () {
+            var UserModel = (function () {
+                function UserModel() {
+                    this.name = 'user';
                 }
-                return BaseStorageService;
+                return UserModel;
             }());
-            var FileStorageService = (function (_super) {
-                __extends(FileStorageService, _super);
-                function FileStorageService() {
-                    var _this = _super !== null && _super.apply(this, arguments) || this;
-                    _this.name = 'file-storage';
-                    return _this;
+            var MockUserModel = (function () {
+                function MockUserModel() {
+                    this.name = 'mock-user';
                 }
-                return FileStorageService;
-            }(BaseStorageService));
-            var MemoryStorageService = (function (_super) {
-                __extends(MemoryStorageService, _super);
-                function MemoryStorageService() {
-                    var _this = _super !== null && _super.apply(this, arguments) || this;
-                    _this.name = 'memory-storage';
-                    return _this;
+                return MockUserModel;
+            }());
+            var userFactory = {
+                provide: UserModel,
+                create: function () {
+                    return new MockUserModel();
                 }
-                return MemoryStorageService;
-            }(BaseStorageService));
+            };
             var MyTest = (function () {
                 function MyTest() {
                 }
                 __decorate([
-                    src_1.DI.InjectViaFactory({
-                        serviceName: 'StorageService',
-                        create: function () {
-                            if (env === 'dev')
-                                return new MemoryStorageService();
-                            return new FileStorageService();
-                        }
-                    }),
-                    __metadata("design:type", BaseStorageService)
-                ], MyTest.prototype, "storageSrv", void 0);
+                    src_1.DI.InjectViaFactory(userFactory),
+                    __metadata("design:type", UserModel)
+                ], MyTest.prototype, "user", void 0);
                 return MyTest;
             }());
             var myTest = new MyTest();
-            expect(myTest.storageSrv.name).toEqual('memory-storage');
-            src_1.DI.clear();
-            env = 'prod';
-            var myTest2 = new MyTest();
-            expect(myTest2.storageSrv.name).toEqual('file-storage');
+            expect(myTest.user.name).toEqual('mock-user');
+        });
+        it('should inject using factory with constructor parameters', function () {
+            var Names = (function () {
+                function Names() {
+                    this.names = ['Nathan', 'David'];
+                }
+                Names = __decorate([
+                    src_1.DI.Singleton()
+                ], Names);
+                return Names;
+            }());
+            var UtilityService = (function () {
+                function UtilityService() {
+                }
+                UtilityService.prototype.addFullStop = function (str) {
+                    return str + '.';
+                };
+                return UtilityService;
+            }());
+            var UserService = (function () {
+                function UserService(name) {
+                    this.name = name;
+                }
+                UserService.prototype.getName = function () {
+                    return this.utilitySrv.addFullStop(this.name);
+                };
+                __decorate([
+                    src_1.DI.Inject(UtilityService),
+                    __metadata("design:type", UtilityService)
+                ], UserService.prototype, "utilitySrv", void 0);
+                return UserService;
+            }());
+            var userFactory = {
+                provide: UserService,
+                create: function () {
+                    var name = src_1.DI.getService(Names);
+                    return new UserService(name.names[0]);
+                }
+            };
+            var UserModel = (function () {
+                function UserModel() {
+                }
+                __decorate([
+                    src_1.DI.InjectViaFactory(userFactory),
+                    __metadata("design:type", UserService)
+                ], UserModel.prototype, "userSrv", void 0);
+                return UserModel;
+            }());
+            var user = new UserModel();
+            expect(user.userSrv.getName()).toEqual('Nathan.');
         });
     });
     describe('override()', function () {

@@ -1,6 +1,23 @@
 // Our dependency container that holds all our dependencies
 let dependencyContainer = {};
 
+
+/**
+ * Generate a random string
+ *
+ * @returns {string}
+ */
+const generateId = (): string => {
+  return (Date.now().toString(36) + Math.random().toString(36).substr(2, 5))
+    .toUpperCase();
+};
+
+
+const addContainerName = (target: any) => {
+  target.diContainerName = target.name + generateId();
+};
+
+
 /**
  * Simple class to handle dependency injection
  *
@@ -17,10 +34,10 @@ export class DI {
    * @returns
    * @memberof DI
    */
-  static Singleton(serviceName: string) {
+  static Singleton(serviceName?: string) {
     return (target: any) => {
-      if (!serviceName) throw new Error('Please enter a service name');
-      target.diServiceName = serviceName;
+      if (serviceName) { target.diContainerName = serviceName; return; }
+      addContainerName(target);
     };
   }
 
@@ -38,23 +55,29 @@ export class DI {
     return (target: any, propName: string): any => {
       Object.defineProperty(target, propName, {
         get: () => {
-          const name = (serviceName) ? serviceName : (service.diServiceName)
-          ? service.diServiceName : service.name;
-          if (!dependencyContainer[name]) {
-            dependencyContainer[name] = new service();
+          if (serviceName && !service.diContainerName) {
+            service.diContainerName = serviceName;
           }
-          return dependencyContainer[name];
+          if (!service.diContainerName) addContainerName(service);
+          if (!dependencyContainer[service.diContainerName]) {
+            dependencyContainer[service.diContainerName] = new service();
+          }
+          return dependencyContainer[service.diContainerName];
         }
       });
     };
   }
 
 
-  static InjectViaFactory(factory: DIBaseFactory|IDIBaseFactory) {
+  static InjectViaFactory(factory: IDIFactory) {
     return (target: any, propName: string): any => {
       Object.defineProperty(target, propName, {
         get: () => {
-          const name = factory.serviceName;
+          if (!factory.provide) throw new Error('provide not set in factory');
+          if (!factory.provide.diContainerName) {
+            addContainerName(factory.provide);
+          }
+          const name: string = factory.provide.diContainerName;
           if (!dependencyContainer[name]) {
             dependencyContainer[name] = factory.create();
           }
@@ -86,8 +109,8 @@ export class DI {
    * @returns {*}
    */
   static getService(service: any, serviceName?: string): any {
-    const name = (serviceName) ? serviceName : (service.diServiceName)
-    ? service.diServiceName : service.name;
+    const name = (serviceName) ? serviceName : (service.diContainerName)
+    ? service.diContainerName : service.name;
     if (!dependencyContainer[name] && service) {
       dependencyContainer[name] = new service();
     }
@@ -126,13 +149,13 @@ export class DI {
  * @abstract
  * @class DIBaseFactory
  */
-export abstract class DIBaseFactory {
-  abstract serviceName: string;
-  abstract create(): any;
-}
+// export abstract class DIBaseFactory {
+//   abstract serviceName?: string;
+//   abstract create(): any;
+// }
 
 
-export interface IDIBaseFactory {
-  serviceName: string;
+export interface IDIFactory {
+  provide: any;
   create: () => any;
 }

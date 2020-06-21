@@ -1,4 +1,4 @@
-import { DI, DIBaseFactory } from '../../src';
+import { DI, IDIFactory } from '../../src';
 
 describe('DI:', () => {
 
@@ -14,20 +14,17 @@ describe('DI:', () => {
    */
   describe('Singleton()', () => {
     it('should attach service name', () => {
-      
       @DI.Singleton('UtilityService')
       class UtilityService {}
 
-      expect(UtilityService['diServiceName']).toEqual('UtilityService');
+      expect(UtilityService['diContainerName']).toEqual('UtilityService');
     });
 
-    it('should throw error if no service name is supplied', () => {
-      try {
-        @DI.Singleton(undefined)
-        class UtilityService {}
-      } catch(e) {
-        expect(e.message).toContain('Please enter a service name');
-      }
+    it('should generate random name', () => {
+      @DI.Singleton()
+      class UtilityService {}
+
+      expect(UtilityService['diContainerName']).toBeDefined();
     });
   });
 
@@ -44,7 +41,7 @@ describe('DI:', () => {
       }
 
       class MyTest {
-        @DI.Inject(UtilityService, 'UtilityService')
+        @DI.Inject(UtilityService)
         private utilitySrv: UtilityService;
 
         addNumbers(num1: number, num2: number): number {
@@ -58,7 +55,7 @@ describe('DI:', () => {
 
     it('should inject singleton', () => {
       let cnt = 0;
-      @DI.Singleton('UtilityService')
+      @DI.Singleton()
       class UtilityService {
         private name: string;
 
@@ -100,7 +97,7 @@ describe('DI:', () => {
    * InjectViaFactory()
    */
   describe('InjectViaFactory()', () => {
-    it('should inject using factory class', () => {
+    it('should inject using factory', () => {
       let env = 'dev';
 
       abstract class BaseStorageService {
@@ -113,17 +110,16 @@ describe('DI:', () => {
         name = 'memory-storage';
       }
 
-      class StorageFactory extends DIBaseFactory {
-        serviceName = 'StorageService';
-
-        create() {
+      const storageFactory: IDIFactory = {
+        provide: BaseStorageService,
+        create: () => {
           if (env === 'dev') return new MemoryStorageService();
           return new FileStorageService();
         }
-      }
+      };
 
       class MyTest {
-        @DI.InjectViaFactory(new StorageFactory())
+        @DI.InjectViaFactory(storageFactory)
         public storageSrv: BaseStorageService;
       }
 
@@ -135,36 +131,67 @@ describe('DI:', () => {
       expect(myTest2.storageSrv.name).toEqual('file-storage');
     });
 
-    it('should inject using factory object', () => {
-      let env = 'dev';
+    it('should inject using factory as mock', () => {
+      class UserModel { name = 'user'; }
+      class MockUserModel { name = 'mock-user'; }
 
-      abstract class BaseStorageService {
-        abstract name: string;
-      }
-      class FileStorageService extends BaseStorageService {
-        name = 'file-storage';
-      }
-      class MemoryStorageService extends BaseStorageService {
-        name = 'memory-storage';
-      }
+      const userFactory: IDIFactory = {
+        provide: UserModel,
+        create: () => {
+          return new MockUserModel();
+        }
+      };
 
       class MyTest {
-        @DI.InjectViaFactory({
-          serviceName: 'StorageService',
-          create: () => {
-            if (env === 'dev') return new MemoryStorageService();
-            return new FileStorageService();
-          }
-        })
-        public storageSrv: BaseStorageService;
+        @DI.InjectViaFactory(userFactory)
+        public user: UserModel;
       }
 
       const myTest = new MyTest();
-      expect(myTest.storageSrv.name).toEqual('memory-storage');
-      DI.clear();
-      env = 'prod';
-      const myTest2 = new MyTest();
-      expect(myTest2.storageSrv.name).toEqual('file-storage');
+      expect(myTest.user.name).toEqual('mock-user');
+    });
+
+    it('should inject using factory with constructor parameters', () => {
+
+      @DI.Singleton()
+      class Names {
+        names = ['Nathan', 'David'];
+      }
+
+      class UtilityService {
+        addFullStop(str: string) {
+          return str + '.';
+        }
+      }
+
+      class UserService {
+        private name: string;
+        @DI.Inject(UtilityService)
+        private utilitySrv: UtilityService;
+
+        constructor(name: string) {
+          this.name = name;
+        }
+
+        getName(): string {
+          return this.utilitySrv.addFullStop(this.name);
+        }
+      }
+
+      const userFactory: IDIFactory = {
+        provide: UserService,
+        create: () => {
+          const name: Names = DI.getService(Names);
+          return new UserService(name.names[0]);
+        }
+      };
+
+      class UserModel {
+        @DI.InjectViaFactory(userFactory)
+        userSrv: UserService;
+      }
+      const user = new UserModel();
+      expect(user.userSrv.getName()).toEqual('Nathan.');
     });
   });
 

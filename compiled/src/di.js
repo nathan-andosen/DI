@@ -1,27 +1,39 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DIBaseFactory = exports.DI = void 0;
+exports.DI = void 0;
 var dependencyContainer = {};
+var generateId = function () {
+    return (Date.now().toString(36) + Math.random().toString(36).substr(2, 5))
+        .toUpperCase();
+};
+var addContainerName = function (target) {
+    target.diContainerName = target.name + generateId();
+};
 var DI = (function () {
     function DI() {
     }
     DI.Singleton = function (serviceName) {
         return function (target) {
-            if (!serviceName)
-                throw new Error('Please enter a service name');
-            target.diServiceName = serviceName;
+            if (serviceName) {
+                target.diContainerName = serviceName;
+                return;
+            }
+            addContainerName(target);
         };
     };
     DI.Inject = function (service, serviceName) {
         return function (target, propName) {
             Object.defineProperty(target, propName, {
                 get: function () {
-                    var name = (serviceName) ? serviceName : (service.diServiceName)
-                        ? service.diServiceName : service.name;
-                    if (!dependencyContainer[name]) {
-                        dependencyContainer[name] = new service();
+                    if (serviceName && !service.diContainerName) {
+                        service.diContainerName = serviceName;
                     }
-                    return dependencyContainer[name];
+                    if (!service.diContainerName)
+                        addContainerName(service);
+                    if (!dependencyContainer[service.diContainerName]) {
+                        dependencyContainer[service.diContainerName] = new service();
+                    }
+                    return dependencyContainer[service.diContainerName];
                 }
             });
         };
@@ -30,7 +42,12 @@ var DI = (function () {
         return function (target, propName) {
             Object.defineProperty(target, propName, {
                 get: function () {
-                    var name = factory.serviceName;
+                    if (!factory.provide)
+                        throw new Error('provide not set in factory');
+                    if (!factory.provide.diContainerName) {
+                        addContainerName(factory.provide);
+                    }
+                    var name = factory.provide.diContainerName;
                     if (!dependencyContainer[name]) {
                         dependencyContainer[name] = factory.create();
                     }
@@ -43,8 +60,8 @@ var DI = (function () {
         dependencyContainer[serviceName] = dependencyInstance;
     };
     DI.getService = function (service, serviceName) {
-        var name = (serviceName) ? serviceName : (service.diServiceName)
-            ? service.diServiceName : service.name;
+        var name = (serviceName) ? serviceName : (service.diContainerName)
+            ? service.diContainerName : service.name;
         if (!dependencyContainer[name] && service) {
             dependencyContainer[name] = new service();
         }
@@ -59,10 +76,4 @@ var DI = (function () {
     return DI;
 }());
 exports.DI = DI;
-var DIBaseFactory = (function () {
-    function DIBaseFactory() {
-    }
-    return DIBaseFactory;
-}());
-exports.DIBaseFactory = DIBaseFactory;
 //# sourceMappingURL=di.js.map
