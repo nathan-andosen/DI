@@ -1,29 +1,34 @@
 ![Test Coverage-shield-badge-1](https://img.shields.io/badge/Test%20Coverage-100%25-brightgreen.svg)
 
-# Node Module Seed
+# DI - Dependency Injection
 
-A repo to kickstart your next typescript private node module.
+A very simple & lean dependency injection container for Typescript.
 
-### Whats included:
+## Key features
 
-* [Typescript](https://www.typescriptlang.org/) - typed superset of JavaScript
-* [GruntJs](https://gruntjs.com/) - task and build tool
-* [Jasmine](https://jasmine.github.io/) - tests written in Jasmine
-* [Istanbul](https://istanbul.js.org/) - test coverage
-* [Webpack](https://webpack.js.org/) - module bundler
+* __Decorator to Inject services__
+* __Light weight & simple to use__
+* __No dependencies__
 
-# Getting started
+# How to use
 
-1. To start your new node module using this seed app, clone this repo to a new
-directory:
+1. Install the module
 
+``npm install @thenja/di --save``
+
+2. Import and use the module
+
+```typescript
+import { DI } from '../../src';
+
+@DI.Singleton('UtilityService')
+class UtilityService {}
+
+class User {
+  @DI.Inject(UtilityService)
+  private utilSrv: UtilityService;
+}
 ```
-git clone https://github.com/nathan-andosen/node-module-seed.git my-module-name
-cd my-module-name
-git remote rm origin
-```
-
-2. Now you can start working on your module. Delete both classes in the _/src_ directory and both of the spec files in the _/spec/ directory. __IMPORTANT:__ Do not delete the _always.spec.ts_ file just yet, you always need a spec file so that the generated output goes into the directory _/compiled/src/_. Once you create your own spec file, you can delete the _always.spec.ts_ file.
 
 # Development
 
@@ -50,29 +55,6 @@ _Tests are automatically ran when you do a build._
 ``npm run test`` - Run the tests. The tests will be ran in a nodejs environment.
 You can run the tests in a browser environment by opening the file 
 _/spec/in-browser/SpecRunner.html_.
-
-# Using the module
-
-### Typescript
-
-```javascript
-import { ClassOne } from 'node-module-seed';
-let classOne = new ClassOne();
-```
-
-### Javascript (browser)
-
-Simple include the minified file in your page. Webpack is used to compile the 
-minified file, it places all the code into a global property called XApp. You
-can change this in the _/webpack.config.js_ file.
-
-```
-<script src="dist/my-class.js" type="text/javascript"></script>
-
-var classOne = new XApp.ClassOne();
-```
-
-
 
 ## License
 

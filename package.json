@@ -1,28 +1,39 @@
 {
-  "name": "node-module-seed",
-  "description": "A repo to kickstart your next typescript node module",
+  "name": "@thenja/DI",
+  "description": "Very simple and lean dependency injection for Typescript",
   "main": "compiled/src/index.js",
   "types": "compiled/src/index.d.ts",
-  "version": "0.0.2",
-  "private": true,
+  "keywords": [
+    "dependency",
+    "injection"
+  ],
+  "bugs": "https://github.com/nathan-andosen/DI/issues",
+  "homepage": "https://github.com/nathan-andosen/DI",
+  "version": "0.0.1",
+  "license": "MIT",
+  "author": "Nathan Anderson",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nathan-andosen/DI"
+  },
   "dependencies": {},
   "devDependencies": {
-    "@types/jasmine": "^3.3.12",
-    "grunt": "^1.0.4",
+    "@types/jasmine": "^3.5.10",
+    "grunt": "^1.1.0",
     "grunt-cli": "^1.3.2",
     "grunt-contrib-watch": "^1.1.0",
     "grunt-exec": "^3.0.0",
-    "istanbul-reporter-shield-badge": "^1.2.0",
-    "jasmine": "^3.4.0",
-    "jasmine-core": "^3.4.0",
+    "istanbul-reporter-shield-badge": "^1.2.1",
+    "jasmine": "^3.5.0",
+    "jasmine-core": "^3.5.0",
     "jasmine-terminal-reporter": "^1.0.3",
     "nyc": "^14.1.1",
     "ts-lint": "^4.5.1",
-    "ts-loader": "^6.0.4",
-    "typescript": "^3.5.3",
-    "webpack": "^4.39.1",
-    "webpack-cli": "^3.3.6",
-    "yargs": "^13.2.4"
+    "ts-loader": "^6.2.2",
+    "typescript": "^3.9.5",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.12",
+    "yargs": "^13.3.2"
   },
   "scripts": {
     "init": "bash ./scripts/init.sh",
@@ -41,7 +52,8 @@
     ],
     "reporter": [
       "json",
-      "text-summary"
+      "text-summary",
+      "html"
     ]
   }
 }
