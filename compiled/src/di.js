@@ -14,9 +14,8 @@ var isProvider = function (obj) {
         && obj.provide && (obj.useFactory || obj.useClass));
 };
 var addServiceToContainerFromProvider = function (provider) {
-    if (!provider.provide.diContainerName) {
+    if (!provider.provide.diContainerName)
         addContainerName(provider.provide);
-    }
     var containerName = provider.provide.diContainerName;
     if (!dependencyContainer[containerName]) {
         dependencyContainer[containerName] = (provider.useClass)

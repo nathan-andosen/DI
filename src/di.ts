@@ -48,9 +48,7 @@ const isProvider = (obj: any) => {
  * @returns {string}
  */
 const addServiceToContainerFromProvider = (provider: IDIProvider): string => {
-  if (!provider.provide.diContainerName) {
-    addContainerName(provider.provide);
-  }
+  if (!provider.provide.diContainerName) addContainerName(provider.provide);
   const containerName = provider.provide.diContainerName;
   if (!dependencyContainer[containerName]) {
     dependencyContainer[containerName] = (provider.useClass)
