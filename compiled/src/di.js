@@ -9,69 +9,84 @@ var generateId = function () {
 var addContainerName = function (target) {
     target.diContainerName = target.name + generateId();
 };
+var isProvider = function (obj) {
+    return (obj.constructor === {}.constructor
+        && obj.provide && (obj.useFactory || obj.useClass));
+};
+var addServiceToContainerFromProvider = function (provider) {
+    if (!provider.provide.diContainerName) {
+        addContainerName(provider.provide);
+    }
+    var containerName = provider.provide.diContainerName;
+    if (!dependencyContainer[containerName]) {
+        dependencyContainer[containerName] = (provider.useClass)
+            ? new provider.useClass() : provider.useFactory();
+    }
+    return containerName;
+};
+var addServiceToContainer = function (service) {
+    if (!service.diContainerName)
+        addContainerName(service);
+    if (!dependencyContainer[service.diContainerName]) {
+        dependencyContainer[service.diContainerName] = new service();
+    }
+    return service.diContainerName;
+};
 var DI = (function () {
     function DI() {
     }
-    DI.Singleton = function (serviceName) {
-        return function (target) {
-            if (serviceName) {
-                target.diContainerName = serviceName;
-                return;
-            }
-            addContainerName(target);
-        };
-    };
-    DI.Inject = function (service, serviceName) {
+    DI.Inject = function (service) {
         return function (target, propName) {
             Object.defineProperty(target, propName, {
                 get: function () {
-                    if (serviceName && !service.diContainerName) {
-                        service.diContainerName = serviceName;
+                    if (!service) {
+                        throw new Error('Inject() error, injected service not set');
                     }
-                    if (!service.diContainerName)
-                        addContainerName(service);
-                    if (!dependencyContainer[service.diContainerName]) {
-                        dependencyContainer[service.diContainerName] = new service();
+                    if (isProvider(service)) {
+                        var containerName = addServiceToContainerFromProvider(service);
+                        return dependencyContainer[containerName];
                     }
-                    return dependencyContainer[service.diContainerName];
+                    else {
+                        return dependencyContainer[addServiceToContainer(service)];
+                    }
                 }
             });
         };
     };
-    DI.InjectViaFactory = function (factory) {
-        return function (target, propName) {
-            Object.defineProperty(target, propName, {
-                get: function () {
-                    if (!factory.provide)
-                        throw new Error('provide not set in factory');
-                    if (!factory.provide.diContainerName) {
-                        addContainerName(factory.provide);
-                    }
-                    var name = factory.provide.diContainerName;
-                    if (!dependencyContainer[name]) {
-                        dependencyContainer[name] = factory.create();
-                    }
-                    return dependencyContainer[name];
-                }
-            });
-        };
-    };
-    DI.override = function (serviceName, dependencyInstance) {
-        dependencyContainer[serviceName] = dependencyInstance;
-    };
-    DI.getService = function (service, serviceName) {
-        var name = (serviceName) ? serviceName : (service.diContainerName)
-            ? service.diContainerName : service.name;
-        if (!dependencyContainer[name] && service) {
-            dependencyContainer[name] = new service();
+    DI.override = function (service, dependencyInstance) {
+        if (isProvider(service)) {
+            var containerName = addServiceToContainerFromProvider(service);
+            dependencyContainer[containerName] = dependencyInstance;
         }
-        return dependencyContainer[name];
+        else {
+            var containerName = addServiceToContainer(service);
+            dependencyContainer[containerName] = dependencyInstance;
+        }
+    };
+    DI.getService = function (service) {
+        if (isProvider(service)) {
+            var containerName = addServiceToContainerFromProvider(service);
+            return dependencyContainer[containerName];
+        }
+        else {
+            return dependencyContainer[addServiceToContainer(service)];
+        }
     };
     DI.clear = function () {
         dependencyContainer = {};
     };
     DI.getContainer = function () {
         return dependencyContainer;
+    };
+    DI.getContainerName = function (service) {
+        var containerName = '';
+        if (isProvider(service)) {
+            containerName = addServiceToContainerFromProvider(service);
+        }
+        else {
+            containerName = addServiceToContainer(service);
+        }
+        return containerName;
     };
     return DI;
 }());

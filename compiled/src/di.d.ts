@@ -1,13 +1,13 @@
 export declare class DI {
-    static Singleton(serviceName?: string): (target: any) => void;
-    static Inject(service: any, serviceName?: string): (target: any, propName: string) => any;
-    static InjectViaFactory(factory: IDIFactory): (target: any, propName: string) => any;
-    static override(serviceName: string, dependencyInstance: any): void;
-    static getService(service: any, serviceName?: string): any;
+    static Inject(service: any | IDIProvider): (target: any, propName: string) => any;
+    static override(service: any | IDIProvider, dependencyInstance: any): void;
+    static getService(service: any | IDIProvider): any;
     static clear(): void;
     static getContainer(): any;
+    static getContainerName(service: any | IDIProvider): string;
 }
-export interface IDIFactory {
+export interface IDIProvider {
     provide: any;
-    create: () => any;
+    useFactory?: () => any;
+    useClass?: any;
 }

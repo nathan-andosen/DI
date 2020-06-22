@@ -27,30 +27,6 @@ describe('DI:', function () {
     afterEach(function () {
         src_1.DI.clear();
     });
-    describe('Singleton()', function () {
-        it('should attach service name', function () {
-            var UtilityService = (function () {
-                function UtilityService() {
-                }
-                UtilityService = __decorate([
-                    src_1.DI.Singleton('UtilityService')
-                ], UtilityService);
-                return UtilityService;
-            }());
-            expect(UtilityService['diContainerName']).toEqual('UtilityService');
-        });
-        it('should generate random name', function () {
-            var UtilityService = (function () {
-                function UtilityService() {
-                }
-                UtilityService = __decorate([
-                    src_1.DI.Singleton()
-                ], UtilityService);
-                return UtilityService;
-            }());
-            expect(UtilityService['diContainerName']).toBeDefined();
-        });
-    });
     describe('Inject()', function () {
         it('should inject dependency', function () {
             var UtilityService = (function () {
@@ -82,10 +58,6 @@ describe('DI:', function () {
                     this.name = 'util-' + cnt;
                 }
                 UtilityService.prototype.getName = function () { return this.name; };
-                UtilityService = __decorate([
-                    src_1.DI.Singleton(),
-                    __metadata("design:paramtypes", [])
-                ], UtilityService);
                 return UtilityService;
             }());
             var MyTest1 = (function () {
@@ -115,8 +87,30 @@ describe('DI:', function () {
             expect(new MyTest1().getName()).toEqual('util-1');
             expect(new MyTest2().getName()).toEqual('util-1');
         });
+        it('should throw error as no service set', function () {
+            try {
+                var UtilityService = (function () {
+                    function UtilityService() {
+                        this.name = 'util';
+                    }
+                    return UtilityService;
+                }());
+                var MyTest1 = (function () {
+                    function MyTest1() {
+                    }
+                    __decorate([
+                        src_1.DI.Inject(undefined),
+                        __metadata("design:type", UtilityService)
+                    ], MyTest1.prototype, "utilitySrv", void 0);
+                    return MyTest1;
+                }());
+            }
+            catch (e) {
+                expect(e.message).toContain('Inject() error');
+            }
+        });
     });
-    describe('InjectViaFactory()', function () {
+    describe('Inject() - with provider', function () {
         it('should inject using factory', function () {
             var env = 'dev';
             var BaseStorageService = (function () {
@@ -144,7 +138,7 @@ describe('DI:', function () {
             }(BaseStorageService));
             var storageFactory = {
                 provide: BaseStorageService,
-                create: function () {
+                useFactory: function () {
                     if (env === 'dev')
                         return new MemoryStorageService();
                     return new FileStorageService();
@@ -154,7 +148,7 @@ describe('DI:', function () {
                 function MyTest() {
                 }
                 __decorate([
-                    src_1.DI.InjectViaFactory(storageFactory),
+                    src_1.DI.Inject(storageFactory),
                     __metadata("design:type", BaseStorageService)
                 ], MyTest.prototype, "storageSrv", void 0);
                 return MyTest;
@@ -179,17 +173,15 @@ describe('DI:', function () {
                 }
                 return MockUserModel;
             }());
-            var userFactory = {
+            var userProvider = {
                 provide: UserModel,
-                create: function () {
-                    return new MockUserModel();
-                }
+                useClass: MockUserModel
             };
             var MyTest = (function () {
                 function MyTest() {
                 }
                 __decorate([
-                    src_1.DI.InjectViaFactory(userFactory),
+                    src_1.DI.Inject(userProvider),
                     __metadata("design:type", UserModel)
                 ], MyTest.prototype, "user", void 0);
                 return MyTest;
@@ -202,9 +194,6 @@ describe('DI:', function () {
                 function Names() {
                     this.names = ['Nathan', 'David'];
                 }
-                Names = __decorate([
-                    src_1.DI.Singleton()
-                ], Names);
                 return Names;
             }());
             var UtilityService = (function () {
@@ -230,7 +219,7 @@ describe('DI:', function () {
             }());
             var userFactory = {
                 provide: UserService,
-                create: function () {
+                useFactory: function () {
                     var name = src_1.DI.getService(Names);
                     return new UserService(name.names[0]);
                 }
@@ -239,7 +228,7 @@ describe('DI:', function () {
                 function UserModel() {
                 }
                 __decorate([
-                    src_1.DI.InjectViaFactory(userFactory),
+                    src_1.DI.Inject(userFactory),
                     __metadata("design:type", UserService)
                 ], UserModel.prototype, "userSrv", void 0);
                 return UserModel;
@@ -254,9 +243,6 @@ describe('DI:', function () {
                 function UtilityService() {
                     this.name = 'util-1';
                 }
-                UtilityService = __decorate([
-                    src_1.DI.Singleton('UtilityService')
-                ], UtilityService);
                 return UtilityService;
             }());
             var MyTest = (function () {
@@ -272,8 +258,44 @@ describe('DI:', function () {
             expect(myTest.utilitySrv.name).toEqual('util-1');
             var utilSrv = new UtilityService();
             utilSrv.name = 'util-2';
-            src_1.DI.override('UtilityService', utilSrv);
+            src_1.DI.override(UtilityService, utilSrv);
             expect(myTest.utilitySrv.name).toEqual('util-2');
+        });
+        it('should override dependency via a provider', function () {
+            var UserModel = (function () {
+                function UserModel() {
+                    this.name = 'user';
+                }
+                return UserModel;
+            }());
+            var MockUserModel = (function () {
+                function MockUserModel() {
+                    this.name = 'mock-user';
+                }
+                return MockUserModel;
+            }());
+            var userProvider = {
+                provide: UserModel,
+                useClass: MockUserModel
+            };
+            var MyTest = (function () {
+                function MyTest() {
+                }
+                __decorate([
+                    src_1.DI.Inject(userProvider),
+                    __metadata("design:type", UserModel)
+                ], MyTest.prototype, "user", void 0);
+                return MyTest;
+            }());
+            var myTest = new MyTest();
+            expect(myTest.user.name).toEqual('mock-user');
+            var myTest2 = new MockUserModel();
+            myTest2.name = 'mock-user-2';
+            src_1.DI.override(userProvider, myTest2);
+            expect(myTest.user.name).toEqual('mock-user-2');
+            var containerName = src_1.DI.getContainerName(userProvider);
+            var container = src_1.DI.getContainer();
+            expect(container[containerName].name).toEqual('mock-user-2');
         });
     });
     describe('getService()', function () {
@@ -282,9 +304,6 @@ describe('DI:', function () {
                 function UtilityService() {
                     this.name = 'util-1';
                 }
-                UtilityService = __decorate([
-                    src_1.DI.Singleton('UtilityService')
-                ], UtilityService);
                 return UtilityService;
             }());
             var MyTest = (function () {
@@ -303,8 +322,39 @@ describe('DI:', function () {
             src_1.DI.clear();
             var srv2 = src_1.DI.getService(UtilityService);
             expect(srv2.name).toEqual('util-1');
-            var srv3 = src_1.DI.getService(UtilityService, 'UtilityService');
+            var srv3 = src_1.DI.getService(UtilityService);
             expect(srv3.name).toEqual('util-1');
+        });
+        it('should get service via a provider', function () {
+            var UserModel = (function () {
+                function UserModel() {
+                    this.name = 'user';
+                }
+                return UserModel;
+            }());
+            var MockUserModel = (function () {
+                function MockUserModel() {
+                    this.name = 'mock-user';
+                }
+                return MockUserModel;
+            }());
+            var userProvider = {
+                provide: UserModel,
+                useClass: MockUserModel
+            };
+            var MyTest = (function () {
+                function MyTest() {
+                }
+                __decorate([
+                    src_1.DI.Inject(userProvider),
+                    __metadata("design:type", UserModel)
+                ], MyTest.prototype, "user", void 0);
+                return MyTest;
+            }());
+            var myTest = new MyTest();
+            expect(myTest.user.name).toEqual('mock-user');
+            var srv = src_1.DI.getService(userProvider);
+            expect(srv.name).toEqual('mock-user');
         });
     });
     describe('clear()', function () {
@@ -313,9 +363,6 @@ describe('DI:', function () {
                 function UtilityService() {
                     this.name = 'util-1';
                 }
-                UtilityService = __decorate([
-                    src_1.DI.Singleton('UtilityService')
-                ], UtilityService);
                 return UtilityService;
             }());
             var MyTest = (function () {
@@ -329,9 +376,10 @@ describe('DI:', function () {
             }());
             var myTest = new MyTest();
             expect(myTest.utilitySrv.name).toEqual('util-1');
-            expect(src_1.DI.getContainer()['UtilityService']).toBeDefined();
+            var containerName = src_1.DI.getContainerName(UtilityService);
+            expect(src_1.DI.getContainer()[containerName]).toBeDefined();
             src_1.DI.clear();
-            expect(src_1.DI.getContainer()['UtilityService']).toBeUndefined();
+            expect(Object.keys(src_1.DI.getContainer()).length).toBeLessThan(1);
         });
     });
 });

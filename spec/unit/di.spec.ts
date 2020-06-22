@@ -1,33 +1,10 @@
-import { DI, IDIFactory } from '../../src';
+import { DI, IDIProvider } from '../../src';
 
 describe('DI:', () => {
 
   afterEach(() => {
     DI.clear();
   });
-
-
-
-
-  /**
-   * Singleton()
-   */
-  describe('Singleton()', () => {
-    it('should attach service name', () => {
-      @DI.Singleton('UtilityService')
-      class UtilityService {}
-
-      expect(UtilityService['diContainerName']).toEqual('UtilityService');
-    });
-
-    it('should generate random name', () => {
-      @DI.Singleton()
-      class UtilityService {}
-
-      expect(UtilityService['diContainerName']).toBeDefined();
-    });
-  });
-
 
 
 
@@ -55,7 +32,6 @@ describe('DI:', () => {
 
     it('should inject singleton', () => {
       let cnt = 0;
-      @DI.Singleton()
       class UtilityService {
         private name: string;
 
@@ -88,15 +64,27 @@ describe('DI:', () => {
       expect(new MyTest1().getName()).toEqual('util-1');
       expect(new MyTest2().getName()).toEqual('util-1');
     });
+
+    it('should throw error as no service set', () => {
+      try {
+        class UtilityService { name = 'util'; }
+        class MyTest1 {
+          @DI.Inject(undefined)
+          private utilitySrv: UtilityService;
+        }
+      } catch(e) {
+        expect(e.message).toContain('Inject() error');
+      }
+    });
   });
 
 
 
 
   /**
-   * InjectViaFactory()
+   * Inject() - with provider
    */
-  describe('InjectViaFactory()', () => {
+  describe('Inject() - with provider', () => {
     it('should inject using factory', () => {
       let env = 'dev';
 
@@ -110,16 +98,16 @@ describe('DI:', () => {
         name = 'memory-storage';
       }
 
-      const storageFactory: IDIFactory = {
+      const storageFactory: IDIProvider = {
         provide: BaseStorageService,
-        create: () => {
+        useFactory: () => {
           if (env === 'dev') return new MemoryStorageService();
           return new FileStorageService();
         }
       };
 
       class MyTest {
-        @DI.InjectViaFactory(storageFactory)
+        @DI.Inject(storageFactory)
         public storageSrv: BaseStorageService;
       }
 
@@ -135,15 +123,13 @@ describe('DI:', () => {
       class UserModel { name = 'user'; }
       class MockUserModel { name = 'mock-user'; }
 
-      const userFactory: IDIFactory = {
+      const userProvider: IDIProvider = {
         provide: UserModel,
-        create: () => {
-          return new MockUserModel();
-        }
+        useClass: MockUserModel
       };
 
       class MyTest {
-        @DI.InjectViaFactory(userFactory)
+        @DI.Inject(userProvider)
         public user: UserModel;
       }
 
@@ -152,8 +138,6 @@ describe('DI:', () => {
     });
 
     it('should inject using factory with constructor parameters', () => {
-
-      @DI.Singleton()
       class Names {
         names = ['Nathan', 'David'];
       }
@@ -178,16 +162,16 @@ describe('DI:', () => {
         }
       }
 
-      const userFactory: IDIFactory = {
+      const userFactory: IDIProvider = {
         provide: UserService,
-        create: () => {
+        useFactory: () => {
           const name: Names = DI.getService(Names);
           return new UserService(name.names[0]);
         }
       };
 
       class UserModel {
-        @DI.InjectViaFactory(userFactory)
+        @DI.Inject(userFactory)
         userSrv: UserService;
       }
       const user = new UserModel();
@@ -203,7 +187,6 @@ describe('DI:', () => {
    */
   describe('override()', () => {
     it('should override dependency in the container', () => {
-      @DI.Singleton('UtilityService')
       class UtilityService {
         name = 'util-1';
       }
@@ -217,8 +200,33 @@ describe('DI:', () => {
       expect(myTest.utilitySrv.name).toEqual('util-1');
       const utilSrv = new UtilityService();
       utilSrv.name = 'util-2';
-      DI.override('UtilityService', utilSrv);
+      DI.override(UtilityService, utilSrv);
       expect(myTest.utilitySrv.name).toEqual('util-2');
+    });
+
+    it('should override dependency via a provider', () => {
+      class UserModel { name = 'user'; }
+      class MockUserModel { name = 'mock-user'; }
+
+      const userProvider: IDIProvider = {
+        provide: UserModel,
+        useClass: MockUserModel
+      };
+
+      class MyTest {
+        @DI.Inject(userProvider)
+        public user: UserModel;
+      }
+
+      const myTest = new MyTest();
+      expect(myTest.user.name).toEqual('mock-user');
+      const myTest2 = new MockUserModel();
+      myTest2.name = 'mock-user-2';
+      DI.override(userProvider, myTest2);
+      expect(myTest.user.name).toEqual('mock-user-2');
+      const containerName = DI.getContainerName(userProvider);
+      const container = DI.getContainer();
+      expect(container[containerName].name).toEqual('mock-user-2');
     });
   });
 
@@ -230,7 +238,6 @@ describe('DI:', () => {
    */
   describe('getService()', () => {
     it('should get service from container', () => {
-      @DI.Singleton('UtilityService')
       class UtilityService {
         name = 'util-1';
       }
@@ -248,8 +255,28 @@ describe('DI:', () => {
       DI.clear();
       const srv2 = DI.getService(UtilityService);
       expect(srv2.name).toEqual('util-1');
-      const srv3 = DI.getService(UtilityService, 'UtilityService');
+      const srv3 = DI.getService(UtilityService);
       expect(srv3.name).toEqual('util-1');
+    });
+
+    it('should get service via a provider', () => {
+      class UserModel { name = 'user'; }
+      class MockUserModel { name = 'mock-user'; }
+
+      const userProvider: IDIProvider = {
+        provide: UserModel,
+        useClass: MockUserModel
+      };
+
+      class MyTest {
+        @DI.Inject(userProvider)
+        public user: UserModel;
+      }
+
+      const myTest = new MyTest();
+      expect(myTest.user.name).toEqual('mock-user');
+      const srv = <UserModel>DI.getService(userProvider);
+      expect(srv.name).toEqual('mock-user');
     });
   });
 
@@ -261,7 +288,6 @@ describe('DI:', () => {
    */
   describe('clear()', () => {
     it('should clear all dependencies from container', () => {
-      @DI.Singleton('UtilityService')
       class UtilityService {
         name = 'util-1';
       }
@@ -273,9 +299,10 @@ describe('DI:', () => {
 
       const myTest = new MyTest();
       expect(myTest.utilitySrv.name).toEqual('util-1');
-      expect(DI.getContainer()['UtilityService']).toBeDefined();
+      const containerName = DI.getContainerName(UtilityService);
+      expect(DI.getContainer()[containerName]).toBeDefined();
       DI.clear();
-      expect(DI.getContainer()['UtilityService']).toBeUndefined();
+      expect(Object.keys(DI.getContainer()).length).toBeLessThan(1);
     });
   });
 });

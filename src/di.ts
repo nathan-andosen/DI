@@ -13,8 +13,59 @@ const generateId = (): string => {
 };
 
 
+/**
+ * Add a container name to the target class / service
+ *
+ * @param {*} target
+ */
 const addContainerName = (target: any) => {
   target.diContainerName = target.name + generateId();
+};
+
+
+/**
+ * Determine if the object is a provider json object
+ *
+ * @param {*} obj
+ * @returns
+ */
+const isProvider = (obj: any) => {
+  return (obj.constructor === {}.constructor
+  && obj.provide && (obj.useFactory || obj.useClass));
+};
+
+
+/**
+ * Add the service from a provider to the dependency container
+ *
+ * @param {IDIProvider} provider
+ * @returns {string}
+ */
+const addServiceToContainerFromProvider = (provider: IDIProvider): string => {
+  if (!provider.provide.diContainerName) {
+    addContainerName(provider.provide);
+  }
+  const containerName = provider.provide.diContainerName;
+  if (!dependencyContainer[containerName]) {
+    dependencyContainer[containerName] = (provider.useClass)
+    ? new provider.useClass() : provider.useFactory();
+  }
+  return containerName;
+};
+
+
+/**
+ * Add the service to the dependency container
+ *
+ * @param {*} service
+ * @returns {string}
+ */
+const addServiceToContainer = (service: any): string => {
+  if (!service.diContainerName) addContainerName(service);
+  if (!dependencyContainer[service.diContainerName]) {
+    dependencyContainer[service.diContainerName] = new service();
+  }
+  return service.diContainerName;
 };
 
 
@@ -27,61 +78,26 @@ const addContainerName = (target: any) => {
 export class DI {
 
   /**
-   * All singleton services should apply this class decorator
-   *
-   * @static
-   * @param {string} serviceName
-   * @returns
-   * @memberof DI
-   */
-  static Singleton(serviceName?: string) {
-    return (target: any) => {
-      if (serviceName) { target.diContainerName = serviceName; return; }
-      addContainerName(target);
-    };
-  }
-
-
-  /**
    * Inject Decorator: Inject a singleton instance of a service
    *
    * @export
    * @param {*} service
-   * @param {string} [serviceName] If you are using minification, you may need
-   *   to pass the service name as a string
    * @returns
    */
-  static Inject(service: any, serviceName?: string) {
+  static Inject(service: any|IDIProvider) {
     return (target: any, propName: string): any => {
       Object.defineProperty(target, propName, {
         get: () => {
-          if (serviceName && !service.diContainerName) {
-            service.diContainerName = serviceName;
+          if (!service) {
+            throw new Error('Inject() error, injected service not set');
           }
-          if (!service.diContainerName) addContainerName(service);
-          if (!dependencyContainer[service.diContainerName]) {
-            dependencyContainer[service.diContainerName] = new service();
+          // lets check if a provider was passed in
+          if (isProvider(service)) {
+            const containerName = addServiceToContainerFromProvider(service);
+            return dependencyContainer[containerName];
+          } else {
+            return dependencyContainer[addServiceToContainer(service)];
           }
-          return dependencyContainer[service.diContainerName];
-        }
-      });
-    };
-  }
-
-
-  static InjectViaFactory(factory: IDIFactory) {
-    return (target: any, propName: string): any => {
-      Object.defineProperty(target, propName, {
-        get: () => {
-          if (!factory.provide) throw new Error('provide not set in factory');
-          if (!factory.provide.diContainerName) {
-            addContainerName(factory.provide);
-          }
-          const name: string = factory.provide.diContainerName;
-          if (!dependencyContainer[name]) {
-            dependencyContainer[name] = factory.create();
-          }
-          return dependencyContainer[name];
         }
       });
     };
@@ -95,8 +111,14 @@ export class DI {
    * @param {string} serviceName
    * @param {*} dependencyInstance
    */
-  static override(serviceName: string, dependencyInstance: any) {
-    dependencyContainer[serviceName] = dependencyInstance;
+  static override(service: any|IDIProvider, dependencyInstance: any) {
+    if (isProvider(service)) {
+      const containerName = addServiceToContainerFromProvider(service);
+      dependencyContainer[containerName] = dependencyInstance;
+    } else {
+      const containerName = addServiceToContainer(service);
+      dependencyContainer[containerName] = dependencyInstance;
+    }
   }
 
 
@@ -105,16 +127,15 @@ export class DI {
    *
    * @export
    * @param {*} service
-   * @param {string} [serviceName]
    * @returns {*}
    */
-  static getService(service: any, serviceName?: string): any {
-    const name = (serviceName) ? serviceName : (service.diContainerName)
-    ? service.diContainerName : service.name;
-    if (!dependencyContainer[name] && service) {
-      dependencyContainer[name] = new service();
+  static getService(service: any|IDIProvider): any {
+    if (isProvider(service)) {
+      const containerName = addServiceToContainerFromProvider(service);
+      return dependencyContainer[containerName];
+    } else {
+      return dependencyContainer[addServiceToContainer(service)];
     }
-    return dependencyContainer[name];
   }
 
 
@@ -139,23 +160,30 @@ export class DI {
   static getContainer(): any {
     return dependencyContainer;
   }
+
+
+  /**
+   * Get the name used in the container for a service
+   *
+   * @static
+   * @param {(any|IDIProvider)} service
+   * @returns {string}
+   * @memberof DI
+   */
+  static getContainerName(service: any|IDIProvider): string {
+    let containerName = '';
+    if (isProvider(service)) {
+      containerName = addServiceToContainerFromProvider(service);
+    } else {
+      containerName = addServiceToContainer(service);
+    }
+    return containerName;
+  }
 }
 
 
-/**
- * Factories for creating services should extend this class
- *
- * @export
- * @abstract
- * @class DIBaseFactory
- */
-// export abstract class DIBaseFactory {
-//   abstract serviceName?: string;
-//   abstract create(): any;
-// }
-
-
-export interface IDIFactory {
+export interface IDIProvider {
   provide: any;
-  create: () => any;
+  useFactory?: () => any;
+  useClass?: any;
 }
