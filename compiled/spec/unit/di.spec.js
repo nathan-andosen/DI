@@ -98,12 +98,15 @@ describe('DI:', function () {
                 var MyTest1 = (function () {
                     function MyTest1() {
                     }
+                    MyTest1.prototype.doNothing = function () { };
                     __decorate([
                         src_1.DI.Inject(undefined),
                         __metadata("design:type", UtilityService)
                     ], MyTest1.prototype, "utilitySrv", void 0);
                     return MyTest1;
                 }());
+                var myTest = new MyTest1();
+                myTest.doNothing();
             }
             catch (e) {
                 expect(e.message).toContain('Inject() error');

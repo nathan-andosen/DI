@@ -2,6 +2,8 @@
 
 # DI - Dependency Injection
 
+__Work in progress__ - Not available on npm yet.
+
 A very simple & lean dependency injection container for Typescript.
 
 ## Key features
@@ -19,9 +21,9 @@ A very simple & lean dependency injection container for Typescript.
 2. Import and use the module
 
 ```typescript
-import { DI } from '../../src';
+import { DI, IDIProvider } from '@thenja/di';
 
-@DI.Singleton('UtilityService')
+// our singleton service
 class UtilityService {}
 
 class User {
@@ -29,6 +31,127 @@ class User {
   private utilSrv: UtilityService;
 }
 ```
+
+## Examples
+
+### Inject using a factory
+
+```typescript
+import { DI, IDIProvider } from '@thenja/di';
+
+let env = 'dev';
+
+abstract class BaseStorageService {
+  abstract name: string;
+}
+class FileStorageService extends BaseStorageService {
+  name = 'file-storage';
+}
+class MemoryStorageService extends BaseStorageService {
+  name = 'memory-storage';
+}
+
+const storageFactory: IDIProvider = {
+  provide: BaseStorageService,
+  useFactory: () => {
+    if (env === 'dev') return new MemoryStorageService();
+    return new FileStorageService();
+  }
+};
+
+class MyTest {
+  @DI.Inject(storageFactory)
+  public storageSrv: BaseStorageService;
+}
+```
+
+### Inject using a different class
+
+```typescript
+import { DI, IDIProvider } from '@thenja/di';
+
+class UserModel { name = 'user'; }
+class MockUserModel { name = 'mock-user'; }
+
+const userProvider: IDIProvider = {
+  provide: UserModel,
+  useClass: MockUserModel
+};
+
+class MyTest {
+  @DI.Inject(userProvider)
+  public user: UserModel;
+}
+```
+
+### Dealing with models
+
+Models are usually not singletons, however, we should still use dependency injection via the factory pattern to create the new model instances.
+
+```typescript
+// BAD
+
+class UserSettingsModel {}
+
+class UserModel {
+  private settings: UserSettingsModel;
+
+  constructor() {
+    // makes it hard to mock settings, we should be using dependency injection
+    this.settings = new UserSettingsModel();
+  }
+}
+
+// BETTER
+
+class UserSettingsModel {}
+
+class UserModel {
+  constructor(private settings: UserSettingsModel) {}
+}
+
+class UserModelFactory {
+  create(): UserModel {
+    return new UserModel(new UserSettingsModel());
+  }
+}
+
+class UserService {
+  @DI.Inject(UserModelFactory)
+  private userModelFactory: UserModelFactory;
+
+  getUser(): UserModel {
+    // we can now mock the UserModelFactory
+    return this.userModelFactory.create();
+  }
+}
+```
+
+# Methods / API
+
+### @DI.Inject(service: any|IDIProvider)
+
+Inject a singleton service into a class. You can either pass in a class object, or a IDIProvider object (see examples above).
+
+### @DI.override(service: any|IDIProvider, dependencyInstance: any)
+
+Override a service. Useful for mocking services.
+
+### @DI.getService(service: any|IDIProvider): any
+
+Get the service instance that is stored inside the dependency container.
+
+### @DI.clear()
+
+Clear the dependency container.
+
+### @DI.getContainer(): { [key: string]: any }
+
+Get the dependency container. Basically, the container is a json object with the key being the name of the service (randomly generated) and the value being the instance of the service.
+
+### @DI.getContainerName(service: any|IDIProvider): string
+
+Get the name used in the dependency container for a particular service.
 
 # Development
 

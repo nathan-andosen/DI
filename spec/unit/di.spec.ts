@@ -71,7 +71,10 @@ describe('DI:', () => {
         class MyTest1 {
           @DI.Inject(undefined)
           private utilitySrv: UtilityService;
+          doNothing() {}
         }
+        const myTest = new MyTest1();
+        myTest.doNothing();
       } catch(e) {
         expect(e.message).toContain('Inject() error');
       }
