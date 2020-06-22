@@ -1,4 +1,4 @@
-![Test Coverage-shield-badge-1](https://img.shields.io/badge/Test%20Coverage-98.08%25-brightgreen.svg)
+![Test Coverage-shield-badge-1](https://img.shields.io/badge/Test%20Coverage-97.5%25-brightgreen.svg)
 
 # DI - Dependency Injection
 

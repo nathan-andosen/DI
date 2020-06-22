@@ -1,3 +1,8 @@
+export interface IDIProvider {
+    provide: any;
+    useFactory?: () => any;
+    useClass?: any;
+}
 export declare class DI {
     static Inject(service: any | IDIProvider): (target: any, propName: string) => any;
     static override(service: any | IDIProvider, dependencyInstance: any): void;
@@ -5,9 +10,4 @@ export declare class DI {
     static clear(): void;
     static getContainer(): any;
     static getContainerName(service: any | IDIProvider): string;
-}
-export interface IDIProvider {
-    provide: any;
-    useFactory?: () => any;
-    useClass?: any;
 }

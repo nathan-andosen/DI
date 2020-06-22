@@ -42,35 +42,24 @@ var DI = (function () {
                     if (!service) {
                         throw new Error('Inject() error, injected service not set');
                     }
-                    if (isProvider(service)) {
-                        var containerName = addServiceToContainerFromProvider(service);
-                        return dependencyContainer[containerName];
-                    }
-                    else {
-                        return dependencyContainer[addServiceToContainer(service)];
-                    }
+                    var containerName = (isProvider(service))
+                        ? addServiceToContainerFromProvider(service)
+                        : addServiceToContainer(service);
+                    return dependencyContainer[containerName];
                 }
             });
         };
     };
     DI.override = function (service, dependencyInstance) {
-        if (isProvider(service)) {
-            var containerName = addServiceToContainerFromProvider(service);
-            dependencyContainer[containerName] = dependencyInstance;
-        }
-        else {
-            var containerName = addServiceToContainer(service);
-            dependencyContainer[containerName] = dependencyInstance;
-        }
+        var containerName = (isProvider(service))
+            ? addServiceToContainerFromProvider(service)
+            : addServiceToContainer(service);
+        dependencyContainer[containerName] = dependencyInstance;
     };
     DI.getService = function (service) {
-        if (isProvider(service)) {
-            var containerName = addServiceToContainerFromProvider(service);
-            return dependencyContainer[containerName];
-        }
-        else {
-            return dependencyContainer[addServiceToContainer(service)];
-        }
+        return (isProvider(service))
+            ? dependencyContainer[addServiceToContainerFromProvider(service)]
+            : dependencyContainer[addServiceToContainer(service)];
     };
     DI.clear = function () {
         dependencyContainer = {};
@@ -79,14 +68,8 @@ var DI = (function () {
         return dependencyContainer;
     };
     DI.getContainerName = function (service) {
-        var containerName = '';
-        if (isProvider(service)) {
-            containerName = addServiceToContainerFromProvider(service);
-        }
-        else {
-            containerName = addServiceToContainer(service);
-        }
-        return containerName;
+        return (isProvider(service)) ? addServiceToContainerFromProvider(service)
+            : addServiceToContainer(service);
     };
     return DI;
 }());

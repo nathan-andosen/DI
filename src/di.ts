@@ -1,6 +1,12 @@
 // Our dependency container that holds all our dependencies
 let dependencyContainer = {};
 
+export interface IDIProvider {
+  provide: any;
+  useFactory?: () => any;
+  useClass?: any;
+}
+
 
 /**
  * Generate a random string
@@ -91,13 +97,10 @@ export class DI {
           if (!service) {
             throw new Error('Inject() error, injected service not set');
           }
-          // lets check if a provider was passed in
-          if (isProvider(service)) {
-            const containerName = addServiceToContainerFromProvider(service);
-            return dependencyContainer[containerName];
-          } else {
-            return dependencyContainer[addServiceToContainer(service)];
-          }
+          const containerName = (isProvider(service))
+            ? addServiceToContainerFromProvider(service)
+            : addServiceToContainer(service);
+          return dependencyContainer[containerName];
         }
       });
     };
@@ -112,13 +115,10 @@ export class DI {
    * @param {*} dependencyInstance
    */
   static override(service: any|IDIProvider, dependencyInstance: any) {
-    if (isProvider(service)) {
-      const containerName = addServiceToContainerFromProvider(service);
-      dependencyContainer[containerName] = dependencyInstance;
-    } else {
-      const containerName = addServiceToContainer(service);
-      dependencyContainer[containerName] = dependencyInstance;
-    }
+    const containerName = (isProvider(service))
+      ? addServiceToContainerFromProvider(service)
+      : addServiceToContainer(service);
+    dependencyContainer[containerName] = dependencyInstance;
   }
 
 
@@ -130,12 +130,9 @@ export class DI {
    * @returns {*}
    */
   static getService(service: any|IDIProvider): any {
-    if (isProvider(service)) {
-      const containerName = addServiceToContainerFromProvider(service);
-      return dependencyContainer[containerName];
-    } else {
-      return dependencyContainer[addServiceToContainer(service)];
-    }
+    return (isProvider(service))
+      ? dependencyContainer[addServiceToContainerFromProvider(service)]
+      : dependencyContainer[addServiceToContainer(service)];
   }
 
 
@@ -171,19 +168,7 @@ export class DI {
    * @memberof DI
    */
   static getContainerName(service: any|IDIProvider): string {
-    let containerName = '';
-    if (isProvider(service)) {
-      containerName = addServiceToContainerFromProvider(service);
-    } else {
-      containerName = addServiceToContainer(service);
-    }
-    return containerName;
+    return (isProvider(service)) ? addServiceToContainerFromProvider(service)
+      : addServiceToContainer(service);
   }
-}
-
-
-export interface IDIProvider {
-  provide: any;
-  useFactory?: () => any;
-  useClass?: any;
 }
