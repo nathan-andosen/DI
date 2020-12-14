@@ -262,12 +262,15 @@ describe('DI:', function () {
                 var MyTest1 = (function () {
                     function MyTest1() {
                     }
+                    MyTest1.prototype.doNothing = function () { };
                     __decorate([
                         src_1.DI.Inject(undefined),
                         __metadata("design:type", UtilityService)
                     ], MyTest1.prototype, "utilitySrv", void 0);
                     return MyTest1;
                 }());
+                var myTest = new MyTest1();
+                myTest.doNothing();
             }
             catch (e) {
                 expect(e.message).toContain('Inject() error');
@@ -575,9 +578,8 @@ var isProvider = function (obj) {
         && obj.provide && (obj.useFactory || obj.useClass));
 };
 var addServiceToContainerFromProvider = function (provider) {
-    if (!provider.provide.diContainerName) {
+    if (!provider.provide.diContainerName)
         addContainerName(provider.provide);
-    }
     var containerName = provider.provide.diContainerName;
     if (!dependencyContainer[containerName]) {
         dependencyContainer[containerName] = (provider.useClass)
@@ -603,35 +605,24 @@ var DI = (function () {
                     if (!service) {
                         throw new Error('Inject() error, injected service not set');
                     }
-                    if (isProvider(service)) {
-                        var containerName = addServiceToContainerFromProvider(service);
-                        return dependencyContainer[containerName];
-                    }
-                    else {
-                        return dependencyContainer[addServiceToContainer(service)];
-                    }
+                    var containerName = (isProvider(service))
+                        ? addServiceToContainerFromProvider(service)
+                        : addServiceToContainer(service);
+                    return dependencyContainer[containerName];
                 }
             });
         };
     };
     DI.override = function (service, dependencyInstance) {
-        if (isProvider(service)) {
-            var containerName = addServiceToContainerFromProvider(service);
-            dependencyContainer[containerName] = dependencyInstance;
-        }
-        else {
-            var containerName = addServiceToContainer(service);
-            dependencyContainer[containerName] = dependencyInstance;
-        }
+        var containerName = (isProvider(service))
+            ? addServiceToContainerFromProvider(service)
+            : addServiceToContainer(service);
+        dependencyContainer[containerName] = dependencyInstance;
     };
     DI.getService = function (service) {
-        if (isProvider(service)) {
-            var containerName = addServiceToContainerFromProvider(service);
-            return dependencyContainer[containerName];
-        }
-        else {
-            return dependencyContainer[addServiceToContainer(service)];
-        }
+        return (isProvider(service))
+            ? dependencyContainer[addServiceToContainerFromProvider(service)]
+            : dependencyContainer[addServiceToContainer(service)];
     };
     DI.clear = function () {
         dependencyContainer = {};
@@ -640,14 +631,8 @@ var DI = (function () {
         return dependencyContainer;
     };
     DI.getContainerName = function (service) {
-        var containerName = '';
-        if (isProvider(service)) {
-            containerName = addServiceToContainerFromProvider(service);
-        }
-        else {
-            containerName = addServiceToContainer(service);
-        }
-        return containerName;
+        return (isProvider(service)) ? addServiceToContainerFromProvider(service)
+            : addServiceToContainer(service);
     };
     return DI;
 }());

@@ -2,8 +2,6 @@
 
 # DI - Dependency Injection
 
-__Work in progress__ - Not available on npm yet.
-
 A very simple & lean dependency injection container for Typescript.
 
 ## Key features
