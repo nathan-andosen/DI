@@ -1,5 +1,5 @@
 {
-  "name": "@thenja/DI",
+  "name": "@thenja/di",
   "description": "Very simple and lean dependency injection for Typescript",
   "main": "compiled/src/index.js",
   "types": "compiled/src/index.d.ts",
